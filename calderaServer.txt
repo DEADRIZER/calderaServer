@@ -1,0 +1,59 @@
+#!/bin/sh -e
+#
+### BEGIN INIT INFO
+# Provides:          Caldera Server
+# Required-Start:    $all
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Running Caldera Server as daemon
+### END INIT INFO
+
+DIR=/home/xyz/caldera
+DAEMON="$DIR/server.py" #ligne de commande du programme, attention à l'extension .py.
+daemon_OPT=""  #argument à utiliser par le programme - Remplacer Utilisateur par votre nom de login
+DAEMONUSER="xyz" #utilisateur du programme
+daemon_NAME="calderaServer" #Nom du programme (doit être identique à l'exécutable).
+#Attention le script est un script bash, le script ne portera donc pas l'extension .py mais .sh.
+PIDFILE=/var/run/$daemon_NAME.pid
+
+PATH="/sbin:/bin:/usr/sbin:/usr/bin" #Ne pas toucher
+
+test -x $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+d_start () {
+        log_daemon_msg "Starting system $daemon_NAME Daemon"
+        start-stop-daemon --background --pidfile $PIDFILE --make-pidfile --name $daemon_NAME --start --quiet --chuid $DAEMONUSER --exec $DAEMON
+        log_end_msg $?
+}
+
+d_stop () {
+        log_daemon_msg "Stopping system $daemon_NAME Daemon"
+        start-stop-daemon --stop --pidfile $PIDFILE --retry 10
+        kill -9 `pgrep haproxy`
+        log_end_msg $?
+}
+
+case "$1" in
+
+        start|stop)
+                d_${1}
+                ;;
+
+        restart|reload|force-reload)
+                        d_stop
+                        d_start
+                ;;
+
+
+        status)
+                status_of_proc "$daemon_NAME" "$DAEMON" "system-wide $daemon_NAME" && exit 0 || exit $?
+                ;;
+        *)
+                echo "Usage: /etc/init.d/$daemon_NAME {start|stop|restart|reload|force-reload|status}"
+                exit 1
+                ;;
+esac
+exit 0
